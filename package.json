@@ -1,0 +1,17 @@
+{
+  "name": "teampulse-team-tracker",
+  "version": "1.3.0",
+  "private": true,
+  "description": "A lightweight real-time team task and presence tracker.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}

@@ -7,52 +7,52 @@ A responsive team workspace with task statuses, live online/offline presence, an
 - First-run workspace setup; the first account becomes the admin.
 - Admin can invite teammates by name and username.
 - Each invitation has a one-time 10-character code. The code is shown to the admin when the invitation is created; only its hash is stored.
-- Admin sees a ready-to-send invitation URL plus the code. The URL opens **Create account** and pre-fills username and code so teammates do not need to type the code manually.
+- Admin sees a ready-to-send invitation URL plus the code. The URL opens **Create account** and pre-fills username and code.
 - Invitations expire after 30 days. Admins can generate a fresh invitation link for a teammate who has not registered yet.
 - Create tasks, assign members, set priority and deadline.
 - Change task status to Pending, In progress, Review, Completed or Blocked.
 - Live task updates and online/offline presence using Socket.IO.
 - Dashboard, activity feed, filters and progress summary.
-- JSON file persistence in `data/team-data.json`.
+- JSON file persistence in `data/team-data.json` (configure a persistent volume for hosted deployment).
 
-## Run on Windows
+## Deploy for a team in different cities (Railway)
+
+The app is a Node.js/Express server with Socket.IO. GitHub stores the source code; it does not run this backend. Deploy the repository as a **Railway Service** (not GitHub Pages).
+
+1. Push this repository to GitHub and sign in to Railway using the GitHub account that can access it.
+2. In Railway, create a new project and choose **Deploy from GitHub repo**. Select `TeamPulse`. Railway detects the included `Dockerfile`.
+3. Open the service settings and generate a Railway public domain. Railway provides an HTTPS address such as `https://your-service.up.railway.app`.
+4. Add a Railway Volume to this service and set its mount path to **`/app/data`**. This is essential: the Dockerfile sets `DATA_DIR=/app/data`, where TeamPulse writes `team-data.json`. Without a persistent volume, user accounts and tasks can be lost when the container is replaced.
+5. Deploy/redeploy the service and open **Settings → Networking → Generate Domain** if the domain was not generated earlier.
+6. Optional custom domain: buy a domain from a registrar, add it under the Railway service's custom domains, then copy the DNS records Railway gives you into the registrar's DNS settings. Railway provisions HTTPS for the domain.
+7. Use the public HTTPS domain when creating invitation links. Since links use the current site origin, invite links generated from the deployed app will use the public domain automatically.
+
+The app exposes `GET /api/health` for a simple hosting health check. The app listens on `0.0.0.0` and reads Railway's `PORT` environment variable.
+
+## Local development on Windows
 
 1. Install Node.js 20 LTS or newer from https://nodejs.org/.
 2. Extract this folder to a normal location such as `C:\TeamPulse`.
 3. Double-click `start.bat`.
 4. On first launch, create the admin workspace account.
-5. Open **Team → Invite teammate**, enter their name and username, and create the invitation.
-6. In the invitation panel, choose the correct link address. Use a local-network address for teammates on the same Wi-Fi, or the public HTTPS address for teammates elsewhere.
-7. Click **Copy invitation link** and send it privately. The link opens Create account with username and invitation code pre-filled; the teammate only needs to choose and confirm a password.
+5. Open **Team → Invite teammate**, enter their name and username, create the invitation, then send the invitation link privately.
 
-The app runs at `http://localhost:3000`. The invitation panel also lists detected local IPv4 addresses so you can make links reachable by teammates on the same Wi-Fi.
+The app runs at `http://localhost:3000`. For a local Wi-Fi test only, another device on the same network can use the host PC's local IP and port 3000. For teammates elsewhere, use the deployed HTTPS domain instead. Do not expose port 3000 directly to the public internet.
 
-## Upgrade from TeamPulse v1 / v1.1 without losing data
+## Upgrade without losing local data
 
 1. Stop the old TeamPulse server.
-2. Make a backup copy of the old `data` folder (especially `data/team-data.json`).
-3. Copy the new v1.3 application files over the existing TeamPulse folder. Keep the existing `data` folder; do not delete it.
-4. Run `start.bat` again. Existing admin/member accounts and tasks remain in the same JSON database.
-5. Existing accounts continue to use their existing passwords/PINs unless you explicitly choose **Generate invite link** for them. New teammates use the invitation-based **Create account** flow.
-6. For an existing member who should choose their own password, use **Generate invite link** on the Team page and share the new link. The teammate opens it to set a new password. Alternatively, **Reset password** lets the admin set a temporary password.
-
-## Let teammates connect on the same Wi-Fi
-
-1. Keep the app running on the host PC.
-2. On the host PC, open Command Prompt and run `ipconfig`.
-3. Find the active Wi-Fi adapter's **IPv4 Address** (for example `192.168.1.25`).
-4. Teammates on the same network open `http://192.168.1.25:3000` (replace with the actual IP).
-5. If Windows Firewall asks, allow Node.js on your **Private network** only.
-
-Do not expose port 3000 directly to the public internet. For access from different locations, deploy behind HTTPS on a VPS or trusted hosting platform and use persistent storage for the `data` folder. The included Dockerfile can be used for VPS deployment.
+2. Back up the old `data` folder, especially `data/team-data.json`.
+3. Copy the new application files over the existing TeamPulse folder. Keep the existing `data` folder; do not delete it.
+4. Run `start.bat` again. Existing accounts and tasks remain in the same JSON database.
 
 ## Online / offline behavior
 
 A member is online while at least one signed-in app connection is active. Closing the tab, signing out, losing the network connection or closing the server causes them to appear offline. Presence is an app-session indicator; it does not monitor a person's device outside the app.
 
-## Data and security
+## Security notes
 
-- All app records are stored in `data/team-data.json`. Stop the server before manually copying this file for backup.
 - Passwords are hashed using Node.js `scrypt`; invitation codes are stored only as SHA-256 hashes and can be used once.
 - Use HTTPS whenever the app is reachable over an untrusted network.
-- This is an MVP, not an enterprise-audited product.
+- Keep the `data` folder out of GitHub; `.gitignore` and `.dockerignore` exclude it.
+- This is an MVP, not an enterprise-audited product. Back up the persistent volume regularly.
